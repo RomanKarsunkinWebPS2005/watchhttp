@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import Clock from "./components/Clock";
 
 type Watch = {
@@ -9,24 +9,42 @@ type Watch = {
 
 export default function App() {
   const [name, setName] = useState("");
-  const [offsetText, setOffsetText] = useState("");
+  const [offsetNum, setOffsetNum] = useState<number | "">("");
   const [watches, setWatches] = useState<Watch[]>([]);
 
+  const [nowMs, setNowMs] = useState<number>(Date.now());
+
+  useEffect(() => {
+    const msToNextSecond = 1000 - (Date.now() % 1000);
+    const timeoutId = window.setTimeout(() => {
+      setNowMs(Date.now());
+      const intervalId = window.setInterval(() => setNowMs(Date.now()), 1000);
+      (window as any).__appClockInterval = intervalId;
+    }, msToNextSecond);
+
+    return () => {
+      clearTimeout(timeoutId);
+      const intervalId = (window as any).__appClockInterval;
+      if (intervalId) {
+        clearInterval(intervalId);
+        (window as any).__appClockInterval = undefined;
+      }
+    };
+  }, []);
+
   function addWatch() {
-    const parsed = parseFloat(offsetText.replace(",", "."));
     if (!name.trim()) {
       alert("Введите название");
       return;
     }
-    if (Number.isNaN(parsed)) {
-      alert("Временная зона должна быть числом (например 3, -5, 9.5)");
+    if (offsetNum === "" || Number.isNaN(offsetNum)) {
+      alert("Введите смещение (число, например 3, -5 или 9.5)");
       return;
     }
-
-    const id = cryptoRandomId();
-    setWatches((s) => [...s, { id, name: name.trim(), offset: parsed }]);
+    const id = Math.random().toString(36).slice(2, 9);
+    setWatches((s) => [...s, { id, name: name.trim(), offset: Number(offsetNum) }]);
     setName("");
-    setOffsetText("");
+    setOffsetNum("");
   }
 
   function removeWatch(id: string) {
@@ -50,9 +68,21 @@ export default function App() {
         <label>
           Временная зона (часы от GMT)
           <input
-            value={offsetText}
-            onChange={(e) => setOffsetText(e.target.value)}
+            type="number"
+            step="0.5"
+            value={offsetNum === "" ? "" : offsetNum}
+            onChange={(e) => {
+              const v = e.target.value;
+              if (v === "") {
+                setOffsetNum("");
+                return;
+              }
+              const num = e.target.valueAsNumber;
+              setOffsetNum(Number.isNaN(num) ? "" : num);
+            }}
             placeholder="3 или -5 или 9.5"
+            min={-12}
+            max={14}
           />
         </label>
 
@@ -70,14 +100,10 @@ export default function App() {
                 ✕
               </button>
             </div>
-            <Clock name={w.name} offsetHours={w.offset} />
+            <Clock nowMs={nowMs} offsetHours={w.offset} />
           </div>
         ))}
       </div>
     </div>
   );
-}
-
-function cryptoRandomId() {
-  return Math.random().toString(36).slice(2, 9);
 }

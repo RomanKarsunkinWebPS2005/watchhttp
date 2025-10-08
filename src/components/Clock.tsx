@@ -1,37 +1,10 @@
-import { useEffect, useState, useRef } from "react";
-
 type Props = {
-  name?: string;
+  nowMs: number;
   offsetHours: number;
 };
 
-export default function Clock({ offsetHours }: Props) {
-  const [nowMs, setNowMs] = useState<number>(Date.now());
-  const intervalRef = useRef<number | null>(null);
-
-  useEffect(() => {
-    setNowMs(Date.now());
-
-    function tick() {
-      setNowMs(Date.now());
-    }
-
-    const msToNextSecond = 1000 - (Date.now() % 1000);
-    const timeoutId = window.setTimeout(() => {
-      tick();
-      intervalRef.current = window.setInterval(tick, 1000);
-    }, msToNextSecond);
-
-    return () => {
-      clearTimeout(timeoutId);
-      if (intervalRef.current !== null) {
-        clearInterval(intervalRef.current);
-      }
-    };
-  }, [offsetHours]);
-
-  const utcMs = nowMs;
-  const targetMs = utcMs + offsetHours * 3600_000;
+export default function Clock({ nowMs, offsetHours }: Props) {
+  const targetMs = nowMs + offsetHours * 3600_000;
   const date = new Date(targetMs);
 
   const seconds = date.getUTCSeconds();
@@ -44,22 +17,10 @@ export default function Clock({ offsetHours }: Props) {
 
   return (
     <div className="clock-outer">
-      <div className="clock">
-        <div
-          className="hand hour"
-          style={{ transform: `rotate(${hourDeg}deg)` }}
-          aria-hidden
-        />
-        <div
-          className="hand minute"
-          style={{ transform: `rotate(${minuteDeg}deg)` }}
-          aria-hidden
-        />
-        <div
-          className="hand second"
-          style={{ transform: `rotate(${secondDeg}deg)` }}
-          aria-hidden
-        />
+      <div className="clock" aria-hidden>
+        <div className="hand hour" style={{ transform: `rotate(${hourDeg}deg)` }} />
+        <div className="hand minute" style={{ transform: `rotate(${minuteDeg}deg)` }} />
+        <div className="hand second" style={{ transform: `rotate(${secondDeg}deg)` }} />
         <div className="center-dot" />
       </div>
 
